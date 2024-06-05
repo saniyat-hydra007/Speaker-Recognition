@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Recorder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recorderjs/0.1.0/recorder.js"></script>
+</head>
+<body>
+    <h1>Record Your Audio</h1>
+    <button id="recordButton" onclick="startRecording()">Start Recording</button>
+    <form id="uploadForm" method="post" enctype="multipart/form-data" action="{{ url_for('upload') }}" style="display:none;">
+        <input type="file" id="audioFile" name="file" accept="audio/wav">
+        <button type="submit">Upload</button>
+    </form>
+    <script>
+        let recorder, audioContext, audioBlob;
+        const recordButton = document.getElementById('recordButton');
+        const uploadForm = document.getElementById('uploadForm');
+        const audioFileInput = document.getElementById('audioFile');
+
+        async function startRecording() {
+            try {
+                if (recordButton.innerText === "Start Recording") {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const input = audioContext.createMediaStreamSource(stream);
+                    recorder = new Recorder(input, { numChannels: 1 });
+                    recorder.record();
+                    recordButton.innerText = "Stop Recording";
+                    recordButton.style.backgroundColor = "red";
+                    console.log('Recording started');
+                } else {
+                    recorder.stop();
+                    recorder.exportWAV(blob => {
+                        audioBlob = blob;
+                        const audioFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(audioFile);
+                        audioFileInput.files = dataTransfer.files;
+                        uploadForm.style.display = 'block';
+                        console.log('Audio file ready for upload');
+                    });
+                    recordButton.innerText = "Start Recording";
+                    recordButton.style.backgroundColor = "";
+                    console.log('Recording stopped');
+                }
+            } catch (error) {
+                console.error('Error during recording:', error);
+                alert('An error occurred while trying to record audio. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>
